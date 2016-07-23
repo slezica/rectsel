@@ -1,0 +1,12 @@
+{
+  "name": "rectsel",
+  "version": "0.1.0",
+  "description": "Select a rectangle on screen, print coordinates to stdout",
+  "main": "src/index.js",
+  "keywords": [],
+  "author": "Santiago Lezica",
+  "license": "MIT",
+  "dependencies": {
+    "x11": "^2.1.0"
+  }
+}
