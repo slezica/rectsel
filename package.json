@@ -6,6 +6,10 @@
   "keywords": [],
   "author": "Santiago Lezica",
   "license": "MIT",
+  "files": ["src", "bin"],
+  "bin": {
+    "rectsel": "bin/rectsel"
+  },
   "dependencies": {
     "x11": "^2.1.0"
   }

@@ -13,18 +13,7 @@ var CurrentTime      = 0
 var TrueColor        = 4
 
 
-x11.createClient(function(err, display) {
-  if (err) {
-    console.error("Error occured while initializing X11:")
-    console.error(err.stack)
-    return
-  }
-
-  start(display)
-})
-
-
-function start(display) {
+function rectsel(display) {
   var X = display.client
   var rootWindowId = display.screen[0].root
 
@@ -46,7 +35,7 @@ function start(display) {
 
   // Create a new window to act as selection rectangle:
   var selectionWindowId = X.AllocID()
-  console.log(display.screen[0].white_pixel)
+
   X.CreateWindow(
     selectionWindowId,
     rootWindowId,
@@ -76,7 +65,7 @@ function start(display) {
   }
 
   function onButtonRelease(event) {
-    console.log(selection.toArray())
+    console.log(selection.toArray().join(' '))
     process.exit(0)
   }
 
@@ -111,4 +100,24 @@ class SelectionRectangle {
   toArray() {
     return [ this.x, this.y, this.width, this.height ]
   }
+}
+
+
+function main() {
+  x11.createClient(function(err, display) {
+    if (err) {
+      console.error("Error occured while initializing X11:")
+      console.error(err.stack)
+      return
+    }
+
+    rectsel(display)
+  })
+}
+
+
+module.exports = {
+  main: main,
+  rectsel: rectsel,
+  SelectionRectangle: SelectionRectangle
 }
