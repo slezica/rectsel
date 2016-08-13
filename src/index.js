@@ -10,6 +10,7 @@ var GrabModeSync     = 0
 var GrabModeAsync    = 1
 var None             = 0
 var CurrentTime      = 0
+var TrueColor        = 4
 
 
 x11.createClient(function(err, display) {
@@ -45,14 +46,14 @@ function start(display) {
 
   // Create a new window to act as selection rectangle:
   var selectionWindowId = X.AllocID()
-
+  console.log(display.screen[0].white_pixel)
   X.CreateWindow(
     selectionWindowId,
     rootWindowId,
     1, 1, 1, 1, // x, y, width, height (initial values are not important)
     0, 0, 0, 0, // border, depth, class, visual (0 = CopyFromParent)
     {
-      backgroundPixel: display.screen[0].white_pixel,
+      backgroundPixel: 0xf1e50a,
       overrideRedirect: true // will remove window decorations
     }
   )
