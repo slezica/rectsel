@@ -6,8 +6,6 @@ var ButtonPress = x11.eventMask.ButtonPress;
 var ButtonRelease = x11.eventMask.ButtonRelease;
 
 // TODO find this values inside x11:
-var Xor              = 11
-var IncludeInferiors = 1
 var GrabModeSync     = 0
 var GrabModeAsync    = 1
 var None             = 0
@@ -26,18 +24,10 @@ x11.createClient(function(err, display) {
 
 
 function start(display) {
-  var white = display.screen[0].white_pixel;
-  var black = display.screen[0].black_pixel;
-
   var X = display.client
-  
   var rootWindowId = display.screen[0].root
-  var contextId = X.AllocID()
 
-
-  // 1. Initialization
-  // Subscribe to root window events, create graphics context for rendering:
-
+  // Subscribe to mouse events via the root window:
   X.ChangeWindowAttributes(rootWindowId, {
     eventMask: PointerMotion | Exposure | ButtonPress | ButtonRelease
   })
@@ -53,49 +43,40 @@ function start(display) {
     CurrentTime    // time
   )
 
-  X.CreateGC(contextId, rootWindowId, {
-    foregroundPixel: black,
-    backgroundPixel: white,
-    subwindowMode  : IncludeInferiors,
-    function       : Xor,
-    planeMask      : white ^ black
-  })
+  // Create a new window to act as selection rectangle:
+  var selectionWindowId = X.AllocID()
 
+  X.CreateWindow(
+    selectionWindowId,
+    rootWindowId,
+    1, 1, 1, 1, // x, y, width, height (initial values are not important)
+    0, 0, 0, 0, // border, depth, class, visual (0 = CopyFromParent)
+    {
+      backgroundPixel: display.screen[0].white_pixel,
+      overrideRedirect: true // will remove window decorations
+    }
+  )
 
-  // 2. Interactive selection
-  // Click and drag to draw a selection rectangle, click again to finish:
-
-  var selectionStart, mousePos
-  var lastDrawnRect
-  
-  function onMouseEvent(event) {
-    mousePos = { x: event.x, y: event.y }
-  }
+  // Track mouse events and change selectionWindow geometry to draw a rectangle
+  // on screen:
+  var selection
 
   function onButtonPress(event) {
-    onMouseEvent(event)
-    selectionStart = mousePos
-  }
-
-  function onButtonRelease(event) {
-    onMouseEvent(event)
-    outputRectangle(rectangleBetween(selectionStart, mousePos))
-    process.exit(0)
+    selection = new SelectionRectangle(event.x, event.y)
+    X.MapWindow(selectionWindowId)
   }
 
   function onPointerMotion(event) {
-    onMouseEvent(event)
-    if (selectionStart == null) return
-    
-    var rect = rectangleBetween(selectionStart, mousePos)
+    if (selection == null) return
+    selection.expandTo(event.x, event.y)
 
-    if (lastDrawnRect) {
-      var r = lastDrawnRect
-      X.ClearArea(rootWindowId, r[0], r[1], r[2], r[3], 0)
-    }
+    X.MoveWindow(selectionWindowId, selection.x, selection.y)
+    X.ResizeWindow(selectionWindowId, selection.width, selection.height)
+  }
 
-    X.PolyFillRectangle(rootWindowId, contextId, rect)
-    lastDrawnRect = rect
+  function onButtonRelease(event) {
+    console.log(selection.toArray())
+    process.exit(0)
   }
 
   X.on('event', function(event) {
@@ -113,16 +94,20 @@ function start(display) {
 }
 
 
-function rectangleBetween(position1, position2) {
-    var x = Math.min(position1.x, position2.x)
-    var y = Math.min(position1.y, position2.y)
-    var width = Math.abs(position1.x - position2.x)
-    var height = Math.abs(position1.y - position2.y)
+class SelectionRectangle {
+  constructor(x, y) {
+    this.originX = x
+    this.originY = y
+  }
 
-    return [ x, y, width, height ]
-}
+  expandTo(x, y) {
+    this.x = Math.min(this.originX, x)
+    this.y = Math.min(this.originY, y)
+    this.width = Math.abs(this.originX - x) || 1 // 0 is an invalid size for a Window
+    this.height = Math.abs(this.originY - y) || 1
+  }
 
-
-function outputRectangle(rect) {
-  console.log.apply(console, rect)
+  toArray() {
+    return [ this.x, this.y, this.width, this.height ]
+  }
 }
